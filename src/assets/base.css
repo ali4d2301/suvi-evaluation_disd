@@ -1,0 +1,40 @@
+:root {
+  color-scheme: light;
+  --bg-top: #eef4fb;
+  --bg-bottom: #dde8f4;
+  --surface: rgba(255, 255, 255, 0.86);
+  --surface-strong: #ffffff;
+  --text-900: #18314c;
+  --text-700: #4d667d;
+  --text-500: #73879c;
+  --line: #dce6f1;
+  --line-strong: #c9d8e7;
+  --primary: #3187ff;
+  --shadow-soft: 0 28px 60px rgba(23, 49, 76, 0.12);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+}
+
+html {
+  font-size: 16px;
+}
+
+body {
+  min-height: 100vh;
+  color: var(--text-900);
+  background:
+    radial-gradient(circle at top left, rgba(49, 135, 255, 0.18), transparent 26%),
+    radial-gradient(circle at top right, rgba(29, 185, 166, 0.14), transparent 24%),
+    linear-gradient(180deg, var(--bg-top) 0%, var(--bg-bottom) 100%);
+  line-height: 1.6;
+  font-family: Aptos, 'Segoe UI Variable', 'Trebuchet MS', sans-serif;
+  font-size: 15px;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
