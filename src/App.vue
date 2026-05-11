@@ -197,7 +197,7 @@ function resolveErrorMessage(error, fallback) {
   return error instanceof Error ? error.message : fallback
 }
 
-async function loadDashboard() {
+async function loadDashboard({ authFailureMessage = '' } = {}) {
   isLoading.value = true
   errorMessage.value = ''
 
@@ -205,6 +205,7 @@ async function loadDashboard() {
     const freshDashboard = await fetchDashboard()
     dashboard.value = freshDashboard
     cacheDashboard(freshDashboard)
+    return true
   } catch (error) {
     if (error instanceof ApiError && error.status === 401) {
       currentUser.value = null
@@ -213,11 +214,12 @@ async function loadDashboard() {
       clearCachedDashboard()
       clearCachedActiveView()
       clearCachedUsers()
-      authErrorMessage.value = ''
-      return
+      authErrorMessage.value = authFailureMessage
+      return false
     }
 
     errorMessage.value = resolveErrorMessage(error, 'Erreur inattendue.')
+    return false
   } finally {
     isLoading.value = false
   }
@@ -264,7 +266,10 @@ async function handleLogin(credentials) {
     cacheCurrentUser(payload.user)
     activeView.value = 'ACT'
     cacheActiveView('ACT')
-    await loadDashboard()
+    await loadDashboard({
+      authFailureMessage:
+        "Connexion validee, mais la session n'a pas ete conservee par le navigateur. Rechargez la page puis reessayez.",
+    })
   } catch (error) {
     authErrorMessage.value = resolveErrorMessage(error, 'Connexion impossible.')
   } finally {

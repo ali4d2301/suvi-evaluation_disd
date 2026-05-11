@@ -47,6 +47,8 @@ VITE_API_BASE_URL=https://votre-api.onrender.com
 
 Après avoir ajouté ou modifié `VITE_API_BASE_URL`, relancer un déploiement Netlify.
 
+Si le proxy Netlify `/api/*` est actif dans `netlify.toml`, supprimer `VITE_API_BASE_URL` de Netlify ou laisser sa valeur vide. Le frontend appellera alors `/api` sur le même domaine que l'interface, ce qui évite les blocages de cookies tiers sur mobile.
+
 ## 3. Points importants
 
 - `FRONTEND_ORIGINS` doit contenir l'URL exacte Netlify utilisée par les utilisateurs.
