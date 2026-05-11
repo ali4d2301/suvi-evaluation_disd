@@ -213,7 +213,7 @@ async function loadDashboard() {
       clearCachedDashboard()
       clearCachedActiveView()
       clearCachedUsers()
-      authErrorMessage.value = 'Votre session a expire. Connectez-vous a nouveau.'
+      authErrorMessage.value = ''
       return
     }
 
