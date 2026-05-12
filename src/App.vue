@@ -1,7 +1,7 @@
 <script setup>
 import './assets/dashboard.css'
 
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 
 import LoginView from './components/LoginView.vue'
 import ActivitiesTableSection from './components/dashboard/ActivitiesTableSection.vue'
@@ -32,6 +32,7 @@ const USER_CACHE_KEY = 'dashboard-current-user'
 const DASHBOARD_CACHE_KEY = 'dashboard-data'
 const VIEW_CACHE_KEY = 'dashboard-active-view'
 const USERS_CACHE_KEY = 'dashboard-users'
+const DASHBOARD_REFRESH_INTERVAL_MS = 60000
 
 function canUserManageUsers(user) {
   return user?.role === 'admin' || user?.isAdmin === true
@@ -192,14 +193,17 @@ const axisPeriodSelection = ref({
   startYear: '',
   endYear: '',
 })
+let dashboardRefreshIntervalId = null
 
 function resolveErrorMessage(error, fallback) {
   return error instanceof Error ? error.message : fallback
 }
 
-async function loadDashboard({ authFailureMessage = '' } = {}) {
-  isLoading.value = true
-  errorMessage.value = ''
+async function loadDashboard({ authFailureMessage = '', silent = false } = {}) {
+  if (!silent) {
+    isLoading.value = true
+    errorMessage.value = ''
+  }
 
   try {
     const freshDashboard = await fetchDashboard()
@@ -218,11 +222,54 @@ async function loadDashboard({ authFailureMessage = '' } = {}) {
       return false
     }
 
-    errorMessage.value = resolveErrorMessage(error, 'Erreur inattendue.')
+    if (!silent || !dashboard.value) {
+      errorMessage.value = resolveErrorMessage(error, 'Erreur inattendue.')
+    }
     return false
   } finally {
-    isLoading.value = false
+    if (!silent) {
+      isLoading.value = false
+    }
   }
+}
+
+function clearDashboardRefreshInterval() {
+  if (typeof window === 'undefined' || dashboardRefreshIntervalId === null) {
+    return
+  }
+
+  window.clearInterval(dashboardRefreshIntervalId)
+  dashboardRefreshIntervalId = null
+}
+
+function refreshDashboardSilently() {
+  if (!currentUser.value || isLoading.value) {
+    return
+  }
+
+  void loadDashboard({ silent: true })
+}
+
+function ensureDashboardRefreshInterval() {
+  if (typeof window === 'undefined' || dashboardRefreshIntervalId !== null) {
+    return
+  }
+
+  dashboardRefreshIntervalId = window.setInterval(() => {
+    if (typeof document !== 'undefined' && document.visibilityState === 'hidden') {
+      return
+    }
+
+    refreshDashboardSilently()
+  }, DASHBOARD_REFRESH_INTERVAL_MS)
+}
+
+function handleDocumentVisibilityChange() {
+  if (typeof document === 'undefined' || document.visibilityState !== 'visible' || !currentUser.value) {
+    return
+  }
+
+  refreshDashboardSilently()
 }
 
 async function initializeSession() {
@@ -296,7 +343,21 @@ async function handleLogout() {
   }
 }
 
-onMounted(initializeSession)
+onMounted(() => {
+  initializeSession()
+
+  if (typeof document !== 'undefined') {
+    document.addEventListener('visibilitychange', handleDocumentVisibilityChange)
+  }
+})
+
+onUnmounted(() => {
+  clearDashboardRefreshInterval()
+
+  if (typeof document !== 'undefined') {
+    document.removeEventListener('visibilitychange', handleDocumentVisibilityChange)
+  }
+})
 
 function normalizeTextValue(value) {
   return normalizeDashboardText(value)
@@ -368,6 +429,7 @@ const heroSummary = computed(() => {
 
   return summary.value
 })
+const lastDataUpdatedAt = computed(() => String(dashboard.value?.lastDataUpdatedAt ?? '').trim())
 const executiveCards = computed(() => buildExecutiveCards(actSummary.value))
 const canManageUsers = computed(() => canUserManageUsers(currentUser.value))
 const sidebarNavItems = computed(() =>
@@ -414,6 +476,19 @@ watch(
       quarterStart: 1,
       quarterEnd: 4,
     }
+  },
+  { immediate: true },
+)
+
+watch(
+  currentUser,
+  (user) => {
+    if (user) {
+      ensureDashboardRefreshInterval()
+      return
+    }
+
+    clearDashboardRefreshInterval()
   },
   { immediate: true },
 )
@@ -477,6 +552,7 @@ function updateHeroPeriodSelection(nextSelection) {
   <div class="shell" :class="{ 'shell--sidebar-collapsed': isSidebarCollapsed }">
     <DashboardSidebar
       :is-collapsed="isSidebarCollapsed"
+      :last-data-updated-at="lastDataUpdatedAt"
       :nav-items="sidebarNavItems"
       @logout="handleLogout"
       @toggle="toggleSidebar"

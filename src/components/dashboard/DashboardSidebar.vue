@@ -1,5 +1,8 @@
 <script setup>
+import { computed } from 'vue'
+
 import disdLogo from '../../assets/disd-logo.png'
+import { formatDateTimeLabel } from '../../utils/dashboardFormatters'
 
 const props = defineProps({
   isCollapsed: {
@@ -10,9 +13,15 @@ const props = defineProps({
     type: Array,
     required: true,
   },
+  lastDataUpdatedAt: {
+    type: String,
+    default: '',
+  },
 })
 
 const emit = defineEmits(['toggle', 'select', 'logout'])
+const lastUpdateLabel = computed(() => formatDateTimeLabel(props.lastDataUpdatedAt))
+const showLastUpdate = computed(() => !props.isCollapsed && Boolean(lastUpdateLabel.value))
 
 function toggleSidebar() {
   emit('toggle')
@@ -73,6 +82,11 @@ function logout() {
     </nav>
 
     <div class="sidebar__footer">
+      <div v-if="showLastUpdate" class="sidebar__update-note" aria-live="polite">
+        <span class="sidebar__update-eyebrow">Données</span>
+        <p class="sidebar__update-text">Mise à jour le {{ lastUpdateLabel }}</p>
+      </div>
+
       <button class="sidebar__logout" type="button" @click="logout">
         <span class="sidebar__logout-tag">OUT</span>
         <span class="sidebar__logout-label">Déconnexion</span>

@@ -61,6 +61,27 @@ def _build_spotlight(summary: dict[str, int | float]) -> dict[str, str]:
 def get_dashboard_payload() -> dict[str, object]:
     with engine.connect() as connection:
         key_indicators = build_key_indicators_payload(connection)
+        last_data_update_row = connection.execute(
+            text(
+                """
+                SELECT
+                    MAX(last_updated_at) AS last_data_updated_at
+                FROM (
+                    SELECT MAX(COALESCE(updated_at, created_at)) AS last_updated_at FROM activite
+                    UNION ALL
+                    SELECT MAX(COALESCE(updated_at, created_at)) AS last_updated_at FROM projets
+                    UNION ALL
+                    SELECT MAX(COALESCE(updated_at, created_at)) AS last_updated_at FROM axes
+                    UNION ALL
+                    SELECT MAX(COALESCE(updated_at, created_at)) AS last_updated_at FROM indicateurs
+                    UNION ALL
+                    SELECT MAX(COALESCE(updated_at, created_at)) AS last_updated_at FROM valeurs_indicateurs
+                    UNION ALL
+                    SELECT MAX(COALESCE(updated_at, created_at)) AS last_updated_at FROM cibles_indicateurs
+                ) AS updates
+                """
+            )
+        ).mappings().one()
 
         summary_row = connection.execute(
             text(
@@ -364,6 +385,7 @@ def get_dashboard_payload() -> dict[str, object]:
 
     return {
         "generatedAt": datetime.utcnow().isoformat(timespec="seconds") + "Z",
+        "lastDataUpdatedAt": _to_iso(last_data_update_row["last_data_updated_at"]),
         "spotlight": _build_spotlight(summary),
         "summary": summary,
         "keyIndicators": key_indicators,
