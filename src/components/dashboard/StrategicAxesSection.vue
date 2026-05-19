@@ -84,7 +84,7 @@ function isSuspendedStatus(label) {
 }
 
 function isStartedStatus(label) {
-  return isCompletedStatus(label) || isInProgressStatus(label) || isSuspendedStatus(label)
+  return isCompletedStatus(label) || isInProgressStatus(label)
 }
 
 function isOverdueActivity(activity, todayKey) {
